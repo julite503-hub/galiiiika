@@ -78,7 +78,7 @@ jobs:
           }
           Write-Host "TCP connectivity successful!"
 
-      - name: Download VirtualBox and OVA Files Using gdown
+      - name: Download VirtualBox Installer and Nadeem.ova
         run: |
           # Install Python packages
           python -m pip install --upgrade pip
@@ -87,18 +87,19 @@ jobs:
           $dest = "C:\Users\Administrator\Desktop\Public"
           if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest | Out-Null }
 
-          $files = @(
-            @{ Id = "1vrV8DxnanOaDDMYyJCl924YS2hWDp02R"; Name = "Nadeem.ova" },
-            @{ Id = "1TWl--uMIzyEfyvh44hfLYx0n4D3B82XF"; Name = "VirtualBox-7.2.4-170995-Win.exe" }
-          )
+          # Download VirtualBox installer from Google Drive
+          $vbUrl = "https://drive.google.com/uc?export=download&id=1TWl--uMIzyEfyvh44hfLYx0n4D3B82XF"
+          $vbOutput = Join-Path $dest "VirtualBox-7.2.4-170995-Win.exe"
+          Write-Host "Downloading VirtualBox installer to $vbOutput ..."
+          python -m gdown $vbUrl -O $vbOutput
+          Write-Host "Downloaded VirtualBox installer`n"
 
-          foreach ($file in $files) {
-              $url = "https://drive.google.com/uc?export=download&id=$($file.Id)"
-              $output = Join-Path $dest $file.Name
-              Write-Host "Downloading $($file.Name) to $output ..."
-              python -m gdown $url -O $output
-              Write-Host "Downloaded $($file.Name)`n"
-          }
+          # Download Nadeem.ova from Cloudflare
+          $ovaUrl = "https://02267335a031d3b8cca94803b004c83b.r2.cloudflarestorage.com/fiverr/Nadeem.ova"
+          $ovaOutput = Join-Path $dest "Nadeem.ova"
+          Write-Host "Downloading Nadeem.ova from Cloudflare to $ovaOutput ..."
+          Invoke-WebRequest -Uri $ovaUrl -OutFile $ovaOutput
+          Write-Host "Downloaded Nadeem.ova`n"
 
       - name: Install VirtualBox Silently
         run: |
