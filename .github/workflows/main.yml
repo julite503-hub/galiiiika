@@ -9,7 +9,6 @@ jobs:
     timeout-minutes: 3600
 
     steps:
-
       - name: Checkout Repository
         uses: actions/checkout@v2
 
@@ -78,56 +77,22 @@ jobs:
           }
           Write-Host "TCP connectivity successful!"
 
-      - name: Install Python and boto3
-        run: |
-          choco install python -y
-          python -m pip install --upgrade pip
-          python -m pip install boto3
-
-      - name: Download VirtualBox and Nadeem.ova from R2
+      - name: Download VirtualBox and OVA Directly (No Keys)
         run: |
           $dest = "C:\Users\Administrator\Desktop\Public"
           if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest | Out-Null }
 
-          # Create Python download script
-          $pyScript = @"
-import boto3
-from botocore.client import Config
-import urllib.request
+          Write-Host "Downloading OVA..."
+          Invoke-WebRequest `
+            -Uri "https://pub-4e3db5ccea8a4f30ae7d4ee15e71f566.r2.dev/Nadeem.ova" `
+            -OutFile "$dest\Nadeem.ova" `
+            -UseBasicParsing
 
-ENDPOINT_URL = "https://02267335a031d3b8cca94803b004c83b.r2.cloudflarestorage.com"
-
-ACCESS_KEY = "de8ce90188147f9fd297a7b0d4b6aed6"
-SECRET_KEY = "0d8035298be64f46e6ac85f746589834b932ed1fb27f03d83b15752e890fce71"
-
-BUCKET_NAME = "fiverr"
-OBJECT_NAME = "Nadeem.ova"
-DEST_PATH = r"C:\Users\Administrator\Desktop\Public\Nadeem.ova"
-
-s3 = boto3.client(
-    "s3",
-    endpoint_url=ENDPOINT_URL,
-    aws_access_key_id=ACCESS_KEY,
-    aws_secret_access_key=SECRET_KEY,
-    config=Config(signature_version="s3v4")
-)
-
-print("Downloading OVA file...")
-s3.download_file(BUCKET_NAME, OBJECT_NAME, DEST_PATH)
-print("OVA download complete.")
-
-# Download VirtualBox installer
-vb_url = "https://download.virtualbox.org/virtualbox/7.2.4/VirtualBox-7.2.4-170995-Win.exe"
-vb_out = r"C:\Users\Administrator\Desktop\Public\VirtualBox-7.2.4-170995-Win.exe"
-
-print("Downloading VirtualBox installer...")
-urllib.request.urlretrieve(vb_url, vb_out)
-print("Installer downloaded.")
-"@
-
-          # Write to file and execute
-          Set-Content -Path "$dest\download.py" -Value $pyScript -Encoding UTF8
-          python "$dest\download.py"
+          Write-Host "Downloading VirtualBox installer..."
+          Invoke-WebRequest `
+            -Uri "https://download.virtualbox.org/virtualbox/7.2.4/VirtualBox-7.2.4-170995-Win.exe" `
+            -OutFile "$dest\VirtualBox-7.2.4-170995-Win.exe" `
+            -UseBasicParsing
 
       - name: Install VirtualBox Silently
         run: |
