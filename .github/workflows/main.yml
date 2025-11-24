@@ -78,46 +78,43 @@ jobs:
           }
           Write-Host "TCP connectivity successful!"
 
-      - name: Download VirtualBox Installer and Nadeem.ova
+      - name: Download VirtualBox and OVA files (Cloudflare R2)
         run: |
-          # Install Python packages
-          python -m pip install --upgrade pip
-          pip install gdown --no-cache-dir
-
           $dest = "C:\Users\Administrator\Desktop\Public"
           if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest | Out-Null }
 
-          # Download VirtualBox installer from Google Drive
-          $vbUrl = "https://drive.google.com/uc?export=download&id=1TWl--uMIzyEfyvh44hfLYx0n4D3B82XF"
-          $vbOutput = Join-Path $dest "VirtualBox-7.2.4-170995-Win.exe"
-          Write-Host "Downloading VirtualBox installer to $vbOutput ..."
-          python -m gdown $vbUrl -O $vbOutput
-          Write-Host "Downloaded VirtualBox installer`n"
+          # Cloudflare R2 public URL for the uploaded OVA
+          $ovaUrl = "https://02267335a031d3b8cca94803b004c83b.r2.cloudflarestorage.com/fiverr/Nadeem.ova"
+          $ovaOut = Join-Path $dest "Nadeem.ova"
 
-          # Download Nadeem.ova from R2
-              python - <<EOF
-              import boto3
-              from botocore.client import Config
-              import os
+          # Official VirtualBox installer URL (adjust version if needed)
+          $vbUrl = "https://download.virtualbox.org/virtualbox/7.2.4/VirtualBox-7.2.4-170995-Win.exe"
+          $vbOut = Join-Path $dest "VirtualBox-7.2.4-170995-Win.exe"
 
-              ENDPOINT_URL = "https://02267335a031d3b8cca94803b004c83b.r2.cloudflarestorage.com"
-              ACCESS_KEY = "de8ce90188147f9fd297a7b0d4b6aed6"
-              SECRET_KEY = "0d8035298be64f46e6ac85f746589834b932ed1fb27f03d83b15752e890fce71"
-              BUCKET_NAME = "fiverr"
-              OBJECT_NAME = "Nadeem.ova"
-              DEST_PATH = r"C:\Users\Administrator\Desktop\Public\Nadeem.ova"
+          function Download-IfMissing($url, $outPath, $minBytes = 1024) {
+              if (Test-Path $outPath) {
+                  $fi = Get-Item $outPath
+                  if ($fi.Length -ge $minBytes) {
+                      Write-Host "Skipping download; file exists and size is $($fi.Length) bytes: $outPath"
+                      return
+                  } else {
+                      Write-Host "Existing file too small; removing and re-downloading: $outPath"
+                      Remove-Item $outPath -Force
+                  }
+              }
+              Write-Host "Downloading $url -> $outPath"
+              try {
+                  Invoke-WebRequest -Uri $url -OutFile $outPath -UseBasicParsing -TimeoutSec 600
+                  Write-Host "Downloaded: $outPath"
+              } catch {
+                  Write-Error "Failed to download $url : $_"
+                  exit 1
+              }
+          }
 
-              s3 = boto3.client(
-              "s3",
-              endpoint_url=ENDPOINT_URL,
-              aws_access_key_id=ACCESS_KEY,
-              aws_secret_access_key=SECRET_KEY,
-              config=Config(signature_version="s3v4")
-              )
-
-              s3.download_file(BUCKET_NAME, OBJECT_NAME, DEST_PATH)
-              print(f"Downloaded {OBJECT_NAME} to {DEST_PATH}")
-              EOF
+          Download-IfMissing $ovaUrl $ovaOut 1000000
+          Start-Sleep -Seconds 2
+          Download-IfMissing $vbUrl $vbOut 50000000
 
       - name: Install VirtualBox Silently
         run: |
