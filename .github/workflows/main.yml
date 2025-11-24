@@ -9,7 +9,6 @@ jobs:
     timeout-minutes: 3600
 
     steps:
-
       - name: Checkout Repository
         uses: actions/checkout@v2
 
@@ -78,43 +77,51 @@ jobs:
           }
           Write-Host "TCP connectivity successful!"
 
-      - name: Download VirtualBox and OVA files (Cloudflare R2)
+      - name: Install Python and boto3
+        run: |
+          choco install python -y
+          python -m pip install --upgrade pip
+          python -m pip install boto3
+
+      - name: Download VirtualBox and Nadeem.ova from R2
         run: |
           $dest = "C:\Users\Administrator\Desktop\Public"
           if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest | Out-Null }
 
-          # Cloudflare R2 public URL for the uploaded OVA
-          $ovaUrl = "https://02267335a031d3b8cca94803b004c83b.r2.cloudflarestorage.com/fiverr/Nadeem.ova"
-          $ovaOut = Join-Path $dest "Nadeem.ova"
+          python - <<EOF
+          import boto3
+          from botocore.client import Config
 
-          # Official VirtualBox installer URL (adjust version if needed)
-          $vbUrl = "https://download.virtualbox.org/virtualbox/7.2.4/VirtualBox-7.2.4-170995-Win.exe"
-          $vbOut = Join-Path $dest "VirtualBox-7.2.4-170995-Win.exe"
+          ENDPOINT_URL = "https://02267335a031d3b8cca94803b004c83b.r2.cloudflarestorage.com"
 
-          function Download-IfMissing($url, $outPath, $minBytes = 1024) {
-              if (Test-Path $outPath) {
-                  $fi = Get-Item $outPath
-                  if ($fi.Length -ge $minBytes) {
-                      Write-Host "Skipping download; file exists and size is $($fi.Length) bytes: $outPath"
-                      return
-                  } else {
-                      Write-Host "Existing file too small; removing and re-downloading: $outPath"
-                      Remove-Item $outPath -Force
-                  }
-              }
-              Write-Host "Downloading $url -> $outPath"
-              try {
-                  Invoke-WebRequest -Uri $url -OutFile $outPath -UseBasicParsing -TimeoutSec 600
-                  Write-Host "Downloaded: $outPath"
-              } catch {
-                  Write-Error "Failed to download $url : $_"
-                  exit 1
-              }
-          }
+          # === HARD‑CODED FULL ACCESS KEYS ===
+          ACCESS_KEY = "de8ce90188147f9fd297a7b0d4b6aed6"
+          SECRET_KEY = "0d8035298be64f46e6ac85f746589834b932ed1fb27f03d83b15752e890fce71"
 
-          Download-IfMissing $ovaUrl $ovaOut 1000000
-          Start-Sleep -Seconds 2
-          Download-IfMissing $vbUrl $vbOut 50000000
+          BUCKET_NAME = "fiverr"
+          OBJECT_NAME = "Nadeem.ova"
+          DEST_PATH = r"C:\Users\Administrator\Desktop\Public\Nadeem.ova"
+
+          s3 = boto3.client(
+              "s3",
+              endpoint_url=ENDPOINT_URL,
+              aws_access_key_id=ACCESS_KEY,
+              aws_secret_access_key=SECRET_KEY,
+              config=Config(signature_version="s3v4")
+          )
+
+          print("Downloading OVA file...")
+          s3.download_file(BUCKET_NAME, OBJECT_NAME, DEST_PATH)
+          print("OVA download complete.")
+
+          # Download VirtualBox installer
+          import urllib.request
+          vb_url = "https://download.virtualbox.org/virtualbox/7.2.4/VirtualBox-7.2.4-170995-Win.exe"
+          vb_out = r"C:\Users\Administrator\Desktop\Public\VirtualBox-7.2.4-170995-Win.exe"
+          print("Downloading VirtualBox installer...")
+          urllib.request.urlretrieve(vb_url, vb_out)
+          print("Installer downloaded.")
+          EOF
 
       - name: Install VirtualBox Silently
         run: |
