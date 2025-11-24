@@ -94,12 +94,30 @@ jobs:
           python -m gdown $vbUrl -O $vbOutput
           Write-Host "Downloaded VirtualBox installer`n"
 
-          # Download Nadeem.ova from Cloudflare
-          $ovaUrl = "https://02267335a031d3b8cca94803b004c83b.r2.cloudflarestorage.com/fiverr/Nadeem.ova"
-          $ovaOutput = Join-Path $dest "Nadeem.ova"
-          Write-Host "Downloading Nadeem.ova from Cloudflare to $ovaOutput ..."
-          Invoke-WebRequest -Uri $ovaUrl -OutFile $ovaOutput
-          Write-Host "Downloaded Nadeem.ova`n"
+          # Download Nadeem.ova from R2
+              python - <<EOF
+              import boto3
+              from botocore.client import Config
+              import os
+
+              ENDPOINT_URL = "https://02267335a031d3b8cca94803b004c83b.r2.cloudflarestorage.com"
+              ACCESS_KEY = "de8ce90188147f9fd297a7b0d4b6aed6"
+              SECRET_KEY = "0d8035298be64f46e6ac85f746589834b932ed1fb27f03d83b15752e890fce71"
+              BUCKET_NAME = "fiverr"
+              OBJECT_NAME = "Nadeem.ova"
+              DEST_PATH = r"C:\Users\Administrator\Desktop\Public\Nadeem.ova"
+
+              s3 = boto3.client(
+              "s3",
+              endpoint_url=ENDPOINT_URL,
+              aws_access_key_id=ACCESS_KEY,
+              aws_secret_access_key=SECRET_KEY,
+              config=Config(signature_version="s3v4")
+              )
+
+              s3.download_file(BUCKET_NAME, OBJECT_NAME, DEST_PATH)
+              print(f"Downloaded {OBJECT_NAME} to {DEST_PATH}")
+              EOF
 
       - name: Install VirtualBox Silently
         run: |
